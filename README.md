@@ -18,6 +18,10 @@ If you find our work useful, please consider citing:
 }
 ```
 
+## TODOS
+- [ ] PyTorch version of SymNet in CVPR'20.
+- [ ] Upgraded version, better attribute recogition for both single-label and multi-label classification.
+
 ## [HAKE](http://hake-mvig.cn/home/)
 **HAKE**[[website]](http://hake-mvig.cn/home/) is a new large-scale knowledge base and engine for human activity understanding. HAKE provides elaborate and abundant **body part state** labels for active human instances in a large scale of images and videos. With HAKE, we boost the action understanding performance on widely-used human activity benchmarks. Now we are still enlarging and enriching it, and looking forward to working with outstanding researchers around the world on its applications and further improvements. If you have any pieces of advice or interests, please feel free to contact [Yong-Lu Li](https://dirtyharrylyl.github.io/) (yonglu_li@sjtu.edu.cn).
 
