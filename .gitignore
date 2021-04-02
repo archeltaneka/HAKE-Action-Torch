@@ -21,3 +21,7 @@ upload
 Weights
 Weights-old
 checkpoints
+
+# Jupyter Notebook
+.ipynb_checkpoints
+__pycache__
