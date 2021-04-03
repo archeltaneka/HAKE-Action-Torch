@@ -41,9 +41,9 @@ class DetectionLoader():
         self._output_size = cfg.DATA_PRESET.HEATMAP_SIZE
         self._sigma = cfg.DATA_PRESET.SIGMA
 
-        self.image = (None, None, None, None)
-        self.det = (None, None, None, None, None, None, None)
-        self.pose = (None, None, None, None, None, None, None)
+        self.image = (None, None, None)
+        self.det = (None, None, None, None, None, None)
+        self.pose = (None, None, None, None, None, None)
         
     def test_transform(self, src, bbox):
         xmin, ymin, xmax, ymax = bbox
@@ -65,9 +65,9 @@ class DetectionLoader():
 
         return img, bbox
 
-    def process(self, im_name, image):
+    def process(self, image):
         # start to pre process images for object detection
-        self.image_preprocess(im_name, image)
+        self.image_preprocess(image)
         # start to detect human in images
         self.image_detection()
         # start to post process cropped human image for pose estimation
@@ -75,7 +75,7 @@ class DetectionLoader():
 
         return self
 
-    def image_preprocess(self, im_name, image):
+    def image_preprocess(self, image):
         # expected image shape like (1,3,h,w) or (3,h,w)
         img = self.detector.image_preprocess(image)
         if isinstance(img, np.ndarray):
@@ -86,23 +86,23 @@ class DetectionLoader():
         orig_img = image # scipy.misc.imread(im_name_k, mode='RGB') is depreciated
         im_dim = orig_img.shape[1], orig_img.shape[0]
 
-        im_name = os.path.basename(im_name)
+#         im_name = os.path.basename(im_name)
 
         with torch.no_grad():
             im_dim = torch.FloatTensor(im_dim).repeat(1, 2)
 
-        self.image = (img, orig_img, im_name, im_dim)
+        self.image = (img, orig_img, im_dim)
 
     def image_detection(self):
-        imgs, orig_imgs, im_names, im_dim_list = self.image
+        imgs, orig_imgs, im_dim_list = self.image
         if imgs is None:
-            self.det = (None, None, None, None, None, None, None)
+            self.det = (None, None, None, None, None, None)
             return
 
         with torch.no_grad():
             dets = self.detector.images_detection(imgs, im_dim_list)
             if isinstance(dets, int) or dets.shape[0] == 0:
-                self.det = (orig_imgs, im_names, None, None, None, None, None)
+                self.det = (orig_imgs, None, None, None, None, None)
                 return
             if isinstance(dets, np.ndarray):
                 dets = torch.from_numpy(dets)
@@ -114,28 +114,28 @@ class DetectionLoader():
 
         boxes = boxes[dets[:, 0] == 0]
         if isinstance(boxes, int) or boxes.shape[0] == 0:
-            self.det = (orig_imgs, im_names, None, None, None, None, None)
+            self.det = (orig_imgs, None, None, None, None, None)
             return
         inps = torch.zeros(boxes.size(0), 3, *self._input_size)
         cropped_boxes = torch.zeros(boxes.size(0), 4)
 
-        self.det = (orig_imgs, im_names, boxes, scores[dets[:, 0] == 0], ids[dets[:, 0] == 0], inps, cropped_boxes)
+        self.det = (orig_imgs, boxes, scores[dets[:, 0] == 0], ids[dets[:, 0] == 0], inps, cropped_boxes)
 
     def image_postprocess(self):
         with torch.no_grad():
-            (orig_img, im_name, boxes, scores, ids, inps, cropped_boxes) = self.det
+            (orig_img, boxes, scores, ids, inps, cropped_boxes) = self.det
             if orig_img is None:
-                self.pose = (None, None, None, None, None, None, None)
+                self.pose = (None, None, None, None, None, None)
                 return
             if boxes is None or boxes.nelement() == 0:
-                self.pose = (None, orig_img, im_name, boxes, scores, ids, None)
+                self.pose = (None, orig_img, boxes, scores, ids, None)
                 return
 
             for i, box in enumerate(boxes):
                 inps[i], cropped_box = self.test_transform(orig_img, box)
                 cropped_boxes[i] = torch.FloatTensor(cropped_box)
 
-            self.pose = (inps, orig_img, im_name, boxes, scores, ids, cropped_boxes)
+            self.pose = (inps, orig_img, boxes, scores, ids, cropped_boxes)
 
     def read(self):
         return self.pose
@@ -147,7 +147,7 @@ class DataWriter():
 
         self.eval_joints = list(range(cfg.DATA_PRESET.NUM_JOINTS))
         self.heatmap_to_coord = get_func_heatmap_to_coord(cfg)
-        self.item = (None, None, None, None, None, None, None)
+        self.item = (None, None, None, None, None, None)
 
     def start(self):
         # start to read pose estimation results
@@ -155,7 +155,7 @@ class DataWriter():
 
     def update(self):
         # get item
-        (boxes, scores, ids, hm_data, cropped_boxes, orig_img, im_name) = self.item
+        (boxes, scores, ids, hm_data, cropped_boxes, orig_img) = self.item
         if orig_img is None:
             return None
         # image channel RGB->BGR
@@ -197,14 +197,14 @@ class DataWriter():
                 )
 
             result = {
-                'imgname': im_name,
+#                 'imgname': im_name,
                 'result': _result
             }
 
         return result
 
-    def save(self, boxes, scores, ids, hm_data, cropped_boxes, orig_img, im_name):
-        self.item = (boxes, scores, ids, hm_data, cropped_boxes, orig_img, im_name)
+    def save(self, boxes, scores, ids, hm_data, cropped_boxes, orig_img):
+        self.item = (boxes, scores, ids, hm_data, cropped_boxes, orig_img)
 
 class AlphaPose():
     def __init__(self, detector_name, yolo_cfg, yolo_weight, pose_cfg, pose_checkpoint, tracker_weight, logger):
@@ -233,14 +233,14 @@ class AlphaPose():
         # logger.info(f'Loading OSNet model from {tracker_weight}...')
         # self.tracker = Tracker(tcfg)
 
-    def process(self, im_name, image):
+    def process(self, image):
         # Init data writer
         self.writer = DataWriter(self.cfg, self.args)
         pose = None
         with torch.no_grad():
-            (inps, orig_img, im_name, boxes, scores, ids, cropped_boxes) = self.det_loader.process(im_name, image).read()
+            (inps, orig_img, boxes, scores, ids, cropped_boxes) = self.det_loader.process(image).read()
             if boxes is None or boxes.nelement() == 0:
-                self.writer.save(None, None, None, None, None, orig_img, im_name)
+                self.writer.save(None, None, None, None, None, orig_img)
                 pose = self.writer.start()
             else:
                 # Pose Estimation
@@ -254,7 +254,7 @@ class AlphaPose():
                 # ids = torch.tensor(ids).unsqueeze(1)
                 # cropped_boxes = torch.stack(cropped_boxes, 0)
                 
-                self.writer.save(boxes, scores, ids, hm, cropped_boxes, orig_img, im_name)
+                self.writer.save(boxes, scores, ids, hm, cropped_boxes, orig_img)
                 pose = self.writer.start()
 
         return pose
