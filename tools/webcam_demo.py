@@ -29,16 +29,18 @@ class Activity2Vec():
         self.pasta_model = pasta_model(cfg)
         logger.info('Loading Activity2Vec model from {}...'.format(cfg.DEMO.A2V_WEIGHT))
         
-    def inference(self, image_path, image=None):
-        if image is None:
-            ori_image = im_read(image_path)
-            alpha_image = cv2.cvtColor(ori_image, cv2.COLOR_BGR2RGB)
-        else:
-            ori_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-            alpha_image = image
-        pose = self.alphapose.process(image_path, alpha_image)
+    def inference(self, image):
+#         if image is None:
+#             ori_image = im_read(image_path)
+#             alpha_image = cv2.cvtColor(ori_image, cv2.COLOR_BGR2RGB)
+#         else:
+#             ori_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+#             alpha_image = image
+        ori_image = image
+        alpha_image = image
+        pose = self.alphapose.process(alpha_image)
         if pose is None:
-            self.logger.info('[Activity2Vec] no pose result for {:s}'.format(image_path))
+#             self.logger.info('[Activity2Vec] no pose result for {:s}'.format(image_path))
             vis = ori_image
             vis = self.vis_tool.draw(vis, None, None, None, None, None, None)
             return ori_image, None, vis
@@ -90,7 +92,7 @@ class Activity2Vec():
                 return ori_image, annos_cpu, vis
 
             except Exception as e:
-                self.logger.info('[Activity2Vec] unsuccess for {:s}'.format(image_path))
+#                 self.logger.info('[Activity2Vec] unsuccess for {:s}'.format(image_path))
                 self.logger.info('{:s}'.format(str(e)))
                 vis = ori_image
                 vis = self.vis_tool.draw(vis, None, None, None, None, None, None)
@@ -103,8 +105,8 @@ def parse_args():
 
     parser.add_argument('--cfg', type=str, required=True, 
                         help='configuration file')
-    parser.add_argument('--input', type=str, required=True, 
-                        help='input path/directory')
+#     parser.add_argument('--input', type=str, required=True, 
+#                         help='input path/directory')
     parser.add_argument('--output', type=str, default='', 
                         help='output directory, empty string means do not output anything')
     parser.add_argument('--mode', type=str, choices=['image', 'video'], default='image',
@@ -209,18 +211,22 @@ if __name__ == '__main__':
     args.logger = logger
     a2v = Activity2Vec(args.mode, cfg, logger)
     
-    image_list = read_input(args)
+    cap = cv2.VideoCapture(0)
+    frames = []
     vises = []
-    res_dir = os.path.join(args.output, 'res')
-    
-    for idx, image in enumerate(tqdm(image_list)):
-        ori_image, annos, vis = a2v.inference('%d.jpg' % idx, image)
+    while True:
+        ret, frame = cap.read()
+#         frames.append(frame)
+
+        ori_image, annos, vis = a2v.inference(frame)
         if args.show_res:
             if vis is None:
                 vis = ori_image
-            cv2.imshow('Activity2Vec', vis)
-            cv2.waitKey(100)
-        vises.append(cv2.cvtColor(vis, cv2.COLOR_BGR2RGB))
+            cv2.imshow('Webcam Activity2Vec', vis)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+            vises.append(cv2.cvtColor(vis, cv2.COLOR_BGR2RGB))
+                
 #     vises = []
 #     res_dir = os.path.join(args.output, 'res')
 #     for idx, image in enumerate(tqdm(image_list)):

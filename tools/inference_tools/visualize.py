@@ -30,7 +30,8 @@ class vis_tool():
         self.verb_name_list = np.array([x.strip() for x in open(cfg.DATA.VERB_NAME_LIST).readlines()])
         self.excluded_verbs = cfg.DEMO.EXCLUDED_VERBS
         self.excluded_verb_names = np.delete(self.verb_name_list, self.excluded_verbs, axis=0)
-        self.skeleton_to_parts = {'lfoot': [16], 'rfoot': [15], 'lleg': [11, 13, 15], 'rleg': [12, 14, 16], 'hip': [12, 11], 'rhand': [9], 'lhand': [10], 'rarm': [5, 7, 9], 'larm': [6, 8, 10], 'head': [0, 1, 2, 3, 4]}
+#         self.skeleton_to_parts = {'lfoot': [16], 'rfoot': [15], 'lleg': [11, 13, 15], 'rleg': [12, 14, 16], 'hip': [12, 11], 'rhand': [9], 'lhand': [10], 'rarm': [5, 7, 9], 'larm': [6, 8, 10], 'head': [0, 1, 2, 3, 4]}
+        self.skeleton_to_parts = {'lfoot': [16], 'rfoot': [15], 'lleg': [11, 13, 15], 'rleg': [12, 14, 16], 'rhand': [9], 'lhand': [10], 'rarm': [5, 7, 9], 'larm': [6, 8, 10], 'head': [0, 1, 2, 3, 4]}
         self.pasta_name_dict = {part_name:part_idx for part_idx, part_name in enumerate(cfg.DATA.PASTA_NAMES)}
         upper_names = [name.upper() for name in cfg.DATA.PASTA_NAMES]
         pasta_num_list = [0] + [cfg.DATA.NUM_PASTAS[upper_name] for upper_name in upper_names]
@@ -55,7 +56,7 @@ class vis_tool():
         part_width = 2 * (np.sqrt(np.sum(norm_vec ** 2)))
         return drawer, part_width
 
-    def draw(self, image, human_bboxes, keypoints, human_scores, p_pasta, p_verb, human_ids, topk=5):
+    def draw(self, image, human_bboxes, keypoints, human_scores, p_pasta, p_verb, human_ids, topk=1):
 
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         im_shape = list(image.shape)
@@ -303,14 +304,14 @@ class vis_tool():
                                 
                                 # Draw hip pasta
 
-                                if 'hip' in self.cfg.DATA.PASTA_NAMES[part_idx]:
-                                    overlay_draw.rectangle([(int((start_keypoint[0]+end_keypoint[0])/2-len(draw_name)*self.cfg.DEMO.FONT_SIZE/3), int((start_keypoint[1]+end_keypoint[1])/2-self.cfg.DEMO.FONT_SIZE/2)), (int((start_keypoint[0]+end_keypoint[0])/2+len(draw_name)*self.cfg.DEMO.FONT_SIZE/4), int((start_keypoint[1]+end_keypoint[1])/2+self.cfg.DEMO.FONT_SIZE/2))], fill=WHITE+(128, ))
-                                    draw.text((((start_keypoint[0]+end_keypoint[0])/2-len(draw_name)*self.cfg.DEMO.FONT_SIZE/3), int((start_keypoint[1]+end_keypoint[1])/2-self.cfg.DEMO.FONT_SIZE/2)), draw_name, font=font, fill=BLUE+(255, ))
+#                                 if 'hip' in self.cfg.DATA.PASTA_NAMES[part_idx]:
+#                                     overlay_draw.rectangle([(int((start_keypoint[0]+end_keypoint[0])/2-len(draw_name)*self.cfg.DEMO.FONT_SIZE/3), int((start_keypoint[1]+end_keypoint[1])/2-self.cfg.DEMO.FONT_SIZE/2)), (int((start_keypoint[0]+end_keypoint[0])/2+len(draw_name)*self.cfg.DEMO.FONT_SIZE/4), int((start_keypoint[1]+end_keypoint[1])/2+self.cfg.DEMO.FONT_SIZE/2))], fill=WHITE+(128, ))
+#                                     draw.text((((start_keypoint[0]+end_keypoint[0])/2-len(draw_name)*self.cfg.DEMO.FONT_SIZE/3), int((start_keypoint[1]+end_keypoint[1])/2-self.cfg.DEMO.FONT_SIZE/2)), draw_name, font=font, fill=BLUE+(255, ))
 
                                 # Draw leg and arm pasta
-                                else:
-                                    overlay_draw.rectangle([(int(start_keypoint[0]-len(draw_name)*self.cfg.DEMO.FONT_SIZE/3), int(start_keypoint[1]-self.cfg.DEMO.FONT_SIZE/2)), (int(start_keypoint[0]+len(draw_name)*self.cfg.DEMO.FONT_SIZE/4), int(start_keypoint[1]+self.cfg.DEMO.FONT_SIZE/2))], fill=WHITE+(128, ))
-                                    draw.text((int(start_keypoint[0]-len(draw_name)*self.cfg.DEMO.FONT_SIZE/3), int(start_keypoint[1])-self.cfg.DEMO.FONT_SIZE/2), draw_name, font=font, fill=BLUE+(255, ))
+#                                 else:
+#                                     overlay_draw.rectangle([(int(start_keypoint[0]-len(draw_name)*self.cfg.DEMO.FONT_SIZE/3), int(start_keypoint[1]-self.cfg.DEMO.FONT_SIZE/2)), (int(start_keypoint[0]+len(draw_name)*self.cfg.DEMO.FONT_SIZE/4), int(start_keypoint[1]+self.cfg.DEMO.FONT_SIZE/2))], fill=WHITE+(128, ))
+#                                     draw.text((int(start_keypoint[0]-len(draw_name)*self.cfg.DEMO.FONT_SIZE/3), int(start_keypoint[1])-self.cfg.DEMO.FONT_SIZE/2), draw_name, font=font, fill=BLUE+(255, ))
                                 if part_name == 'lleg':
                                     lfoot_width = part_width
                                 if part_name == 'rleg':
@@ -330,9 +331,9 @@ class vis_tool():
                         if head_score < 0.3:
                             continue
                         draw_name = pasta_draw_names[part_idx]
-                        draw.rectangle([(int(head_centre[0]-head_width/2), int(head_centre[1]-head_width/2)), (int(head_centre[0]+head_width/2), int(head_centre[1]+head_width/2))], fill=None, outline=PART_COLOR_LIST[part_idx]+(255, ), width=2)
-                        overlay_draw.rectangle([(int(head_centre[0]-len(draw_name)*self.cfg.DEMO.FONT_SIZE/3), int(head_centre[1]-self.cfg.DEMO.FONT_SIZE/2)), (int(head_centre[0]+len(draw_name)*self.cfg.DEMO.FONT_SIZE/4), int(head_centre[1]+self.cfg.DEMO.FONT_SIZE/2))], fill=WHITE+(128, ))
-                        draw.text((int(head_centre[0]-len(draw_name)*self.cfg.DEMO.FONT_SIZE/3), int(head_centre[1]-self.cfg.DEMO.FONT_SIZE/2)), draw_name, font=font, fill=BLUE+(255, ))
+#                         draw.rectangle([(int(head_centre[0]-head_width/2), int(head_centre[1]-head_width/2)), (int(head_centre[0]+head_width/2), int(head_centre[1]+head_width/2))], fill=None, outline=PART_COLOR_LIST[part_idx]+(255, ), width=2)
+#                         overlay_draw.rectangle([(int(head_centre[0]-len(draw_name)*self.cfg.DEMO.FONT_SIZE/3), int(head_centre[1]-self.cfg.DEMO.FONT_SIZE/2)), (int(head_centre[0]+len(draw_name)*self.cfg.DEMO.FONT_SIZE/4), int(head_centre[1]+self.cfg.DEMO.FONT_SIZE/2))], fill=WHITE+(128, ))
+#                         draw.text((int(head_centre[0]-len(draw_name)*self.cfg.DEMO.FONT_SIZE/3), int(head_centre[1]-self.cfg.DEMO.FONT_SIZE/2)), draw_name, font=font, fill=BLUE+(255, ))
                         
                 for part_name, kps_idxs in foot_and_hand.items():
                     if part_name[1:] in self.pasta_name_dict:
@@ -364,8 +365,8 @@ class vis_tool():
                     draw.text((int(centre[0]-len(draw_name)*self.cfg.DEMO.FONT_SIZE/3), int(centre[1]-self.cfg.DEMO.FONT_SIZE/2)), draw_name, font=font, fill=BLUE+(255, ))
 
                 # Draw remained skeleton
-                draw, _ = self.rotated_rectangle(draw, human_keypoints[5][:2], human_keypoints[6][:2], PURPLE, 1)
-                draw, _ = self.rotated_rectangle(draw, (human_keypoints[5][:2] + human_keypoints[6][:2]) / 2, (human_keypoints[11][:2] + human_keypoints[12][:2]) / 2, SOMECOLOR, 2/3)
+#                 draw, _ = self.rotated_rectangle(draw, human_keypoints[5][:2], human_keypoints[6][:2], PURPLE, 1)
+#                 draw, _ = self.rotated_rectangle(draw, (human_keypoints[5][:2] + human_keypoints[6][:2]) / 2, (human_keypoints[11][:2] + human_keypoints[12][:2]) / 2, SOMECOLOR, 2/3)
                 human_count += 1
 
         # Combine image and canvas
