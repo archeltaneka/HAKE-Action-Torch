@@ -20,7 +20,33 @@ from PIL import Image, ImageDraw, ImageFont
 from moviepy.editor import *
 
 class Activity2Vec():
+    """
+        Activity2Vec pipeline class to predict interactions between humans and objects
+
+        Attributes:
+            - mode: can be in form of image/video (deprecated since we only accept webcam as the input)
+            - cfg: configuration file
+            - logger: for output logging purposes
+            - vis_tool: a.k.a visualization tool, this is what will be shown in the output screen
+            - alphapose: the AlphaPose object. See inference_tools.pose_inference for more information
+            - pasta_model: PaSta or "Part States" model. See inference_tools.pasta_inference for more information
+
+        Methods:
+            - __init__ : class constructor, initialize attributes
+            - inference : make an inference on an image/frame
+    """
     def __init__(self, mode, cfg, logger):
+        """
+            Class constructor
+
+            Arguments:
+                - mode: str, 'Image' or 'Video' depending on the input desired by the user (deprecated)
+                - cfg: str, Path to the configuration file (configs/a2v/a2v.yaml)
+                - logger: activity2vec.ult.logging, output logs
+
+            Returns:
+                None
+        """
         self.mode = mode
         self.cfg = cfg
         self.logger = logger
@@ -30,12 +56,19 @@ class Activity2Vec():
         logger.info('Loading Activity2Vec model from {}...'.format(cfg.DEMO.A2V_WEIGHT))
         
     def inference(self, image):
-#         if image is None:
-#             ori_image = im_read(image_path)
-#             alpha_image = cv2.cvtColor(ori_image, cv2.COLOR_BGR2RGB)
-#         else:
-#             ori_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-#             alpha_image = image
+        """
+            Make an inference based on the input
+
+            Arguments:
+                - image: numpy.ndarray, input image/frame
+
+            Returns:
+                - ori_image: numpy.ndarray, the original image
+                - annos_cpu:  dict, dictionary of annotations (detached from GPU to CPU)
+                - vis: inference_tools.visualize.vis_tool, visualization canvas
+        """
+
+        # input the frame directly
         ori_image = image
         alpha_image = image
         pose = self.alphapose.process(alpha_image)
@@ -100,17 +133,22 @@ class Activity2Vec():
         
 
 def parse_args():
+    """
+        Parsing important and required arguments to execute the script
+
+        Arguments:
+            None
+
+        Returns:
+            args: dict, dictionary of arguments
+    """
 
     parser = argparse.ArgumentParser(description='Activity2Vec Demo')
 
     parser.add_argument('--cfg', type=str, required=True, 
                         help='configuration file')
-#     parser.add_argument('--input', type=str, required=True, 
-#                         help='input path/directory')
     parser.add_argument('--output', type=str, default='', 
                         help='output directory, empty string means do not output anything')
-    parser.add_argument('--mode', type=str, choices=['image', 'video'], default='image',
-                        help='choose the type of input')
     parser.add_argument('--show-res', action='store_true', 
                         help='choose whether to show the output')
     parser.add_argument('--save-res', action='store_true', 
@@ -127,6 +165,16 @@ def parse_args():
     return args
 
 def setup():
+    """
+        Setup utility
+
+        Arguments:
+            None
+
+        Returns:
+            - cfg: activity2vec.ult.config, configuration file
+            - args: argparse, arguments parsed
+    """
     cfg = get_cfg()
     args = parse_args()
     cfg.merge_from_file(args.cfg)
@@ -136,63 +184,9 @@ def setup():
     os.environ['CUDA_VISIBLE_DEVICES'] = str(cfg.GPU_ID)
     cfg.freeze()
     return cfg, args
-
-def check_img(filename):
-    return True if filename.lower().endswith(('.bmp', '.dib', '.png', '.jpg', '.jpeg', '.pbm', '.pgm', '.ppm', '.tif', '.tiff')) else False
-
-def read_video(args):
-    video_path = args.input
-    clip = VideoFileClip(video_path)
-    frames = []
-    args.logger.info('[Input] Reading frames ...')
-    for frame in tqdm(clip.iter_frames()):
-        frames.append(frame)
-    return frames
-    
-def read_webcam(args):
-    save_path = args.input
-    clip = VideoFileClip(save_path)
-    frames = []
-    
-    for frame in tqdm(clip.iter_frames()):
-        frames.append(frame)
-    
-    return frames
-    
-def read_input(args):
-    return read_webcam(args)
-#     if args.mode == 'image':
-#         filepath = args.input
-#         if os.path.exists(filepath):
-#             if os.path.isdir(filepath):
-#                 args.logger.info('[Input] Image directory detected.')
-#                 imgpaths = []
-#                 for root, dirs, files in os.walk(filepath):
-#                     for file in files:
-#                         if check_img(file):
-#                             imagepath = os.path.join(root, file)
-#                             imgpaths.append(imagepath)
-#             elif check_img(filepath):
-#                 args.logger.info('[Input] Image file detected.')
-#                 imgpaths = [filepath]
-            
-#             elif filepath.lower().endswith('.txt'):
-#                 args.logger.info('[Input] Image list detected.')
-#                 imgpaths = open(filepath, 'r').readlines()
-#                 imgpaths = [x.strip() for x in imgpaths]
-            
-#             else:
-#                 args.logger.info('[Input] Not supported file format {:s}'.format(os.path.splitext(filepath)[-1]))
-#                 raise NotImplementedError
-#             return imgpaths
-#         else:
-#             args.logger.info('[Input] path does not exist! Empty image list will be returned.')
-#             return []
-#     else:
-#         args.logger.info('[Input] Video file detected.')
-#         return read_video(args)
         
 if __name__ == '__main__':
+    # setup with a configuration file
     cfg, args = setup()
     if len(args.output) > 0:
         assert os.path.splitext(args.output)[-1] == '', 'output should be directory!'
@@ -209,88 +203,22 @@ if __name__ == '__main__':
     logger.info('cfg:\n')
     logger.info(cfg)
     args.logger = logger
+    # initiate Activity2Vec pipeline
     a2v = Activity2Vec(args.mode, cfg, logger)
     
+    # capture from webcam
     cap = cv2.VideoCapture(0)
-    frames = []
     vises = []
     while True:
         ret, frame = cap.read()
-#         frames.append(frame)
-
+        # make an inference for each frame
         ori_image, annos, vis = a2v.inference(frame)
         if args.show_res:
             if vis is None:
                 vis = ori_image
+            # show result
             cv2.imshow('Webcam Activity2Vec', vis)
+            # quit upon hitting 'q'
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
             vises.append(cv2.cvtColor(vis, cv2.COLOR_BGR2RGB))
-                
-#     vises = []
-#     res_dir = os.path.join(args.output, 'res')
-#     for idx, image in enumerate(tqdm(image_list)):
-#         ori_image, annos, vis = a2v.inference('%d.jpg' % idx, image)
-#         if args.show_res:
-#             if vis is None:
-#                 vis = ori_image
-#             cv2.imshow('Activity2Vec', vis)
-#             cv2.waitKey(1)
-#             vises.append(cv2.cvtColor(vis, cv2.COLOR_BGR2RGB))
-    
-    
-#     image_list = read_input(args)
-
-#     if args.mode == 'image':
-#         for image_path in tqdm(image_list):
-#             ori_image, annos, vis = a2v.inference(image_path)
-#             if args.show_res:
-#                 if vis is None:
-#                     vis = ori_image
-#                 cv2.imshow('Activity2Vec', vis)
-#                 cv2.waitKey(0)
-#                 cv2.destroyAllWindows()
-
-#             if len(args.output) > 0:
-#                 basename = os.path.basename(image_path)
-
-#                 if args.save_res:
-#                     base, ext = os.path.splitext(basename)
-#                     ext = '.pkl'
-#                     resname = base + ext
-#                     res_path = os.path.join(args.output, 'res', resname)
-#                     pickle.dump(annos, open(res_path, 'wb'))
-
-#                 if args.save_vis:
-#                     vis_path = os.path.join(args.output, 'vis', basename)
-#                     cv2.imwrite(vis_path, vis)
-                
-#     else:
-#         vises = []
-#         res_dir = os.path.join(args.output, 'res')
-
-#         for idx, image in enumerate(tqdm(image_list)):
-#             ori_image, annos, vis = a2v.inference('%d.jpg' % idx, image)
-#             if args.show_res:
-#                 if vis is None:
-#                     vis = ori_image
-#                 cv2.imshow('Activity2Vec', vis)
-#                 cv2.waitKey(100)
-#             vises.append(cv2.cvtColor(vis, cv2.COLOR_BGR2RGB))
-
-#             if args.save_res:
-#                 res_path = os.path.join(res_dir, '%d.pkl' % idx)
-#                 pickle.dump(annos, open(res_path, 'wb'))
-
-#             del annos
-#             del vis
-            
-#         if args.save_vis:
-#             video = cv2.VideoCapture(args.input)
-#             fps = video.get(cv2.CAP_PROP_FPS)
-#             video.release()
-
-#             new_clip = ImageSequenceClip(vises, fps=fps)
-#             basename = os.path.basename(args.input)
-#             vis_path = os.path.join(args.output, 'vis', basename)
-#             new_clip.write_videofile(vis_path)

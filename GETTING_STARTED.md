@@ -1,6 +1,11 @@
 ## Getting Started with Activity2Vec
 
 ### Demo
+Inference with a webcam on GPU 0:
+```
+python -u tools/webcam_demo.py --cfg configs/a2v/a2v.yaml --show-res GPU_ID 0
+```
+
 Inference with the pretrained model on GPU 0 and show the visualization results of the images in hico-test set:
 
 ```

@@ -31,6 +31,7 @@ class vis_tool():
         self.excluded_verbs = cfg.DEMO.EXCLUDED_VERBS
         self.excluded_verb_names = np.delete(self.verb_name_list, self.excluded_verbs, axis=0)
 #         self.skeleton_to_parts = {'lfoot': [16], 'rfoot': [15], 'lleg': [11, 13, 15], 'rleg': [12, 14, 16], 'hip': [12, 11], 'rhand': [9], 'lhand': [10], 'rarm': [5, 7, 9], 'larm': [6, 8, 10], 'head': [0, 1, 2, 3, 4]}
+        # consider only both feet and hands
         self.skeleton_to_parts = {'lfoot': [16], 'rfoot': [15], 'lleg': [11, 13, 15], 'rleg': [12, 14, 16], 'rhand': [9], 'lhand': [10], 'rarm': [5, 7, 9], 'larm': [6, 8, 10], 'head': [0, 1, 2, 3, 4]}
         self.pasta_name_dict = {part_name:part_idx for part_idx, part_name in enumerate(cfg.DATA.PASTA_NAMES)}
         upper_names = [name.upper() for name in cfg.DATA.PASTA_NAMES]
