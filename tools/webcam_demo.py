@@ -147,6 +147,8 @@ def parse_args():
 
     parser.add_argument('--cfg', type=str, required=True, 
                         help='configuration file')
+    parser.add_argument('--mode', type=str, choices=['image', 'video'], default='image',
+                       help='choose the type of the input')
     parser.add_argument('--output', type=str, default='', 
                         help='output directory, empty string means do not output anything')
     parser.add_argument('--show-res', action='store_true', 
